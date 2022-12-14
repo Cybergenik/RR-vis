@@ -11,11 +11,13 @@ AoC Day14 part 2 Visualizer
 by: <a href="https://lremes.com" target="blanc_">Luciano Remes </a>
 </div>
 
+### Requirements:
+- Golang version >= 1.19
 
 ### Usage: 
 1. `git clone https://github.com/Cybergenik/RR-vis && cd RR-vis`
 2. update *input.txt* file with your input
-3. go run .
+3. `go run .`
 4. watch the ASCII sand :>
 
 
