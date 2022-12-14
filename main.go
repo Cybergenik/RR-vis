@@ -117,7 +117,7 @@ func pour_sand(walls map[Coords]bool, max_y int, updateCh chan UpdateMsg){
                 X: curr_grain.x,
                 Y: curr_grain.y,
                 State: 0,
-                Total: total
+                Total: total,
             }
             walls[curr_grain] = true
             curr_grain = Coords{x:500, y:0}
@@ -125,7 +125,7 @@ func pour_sand(walls map[Coords]bool, max_y int, updateCh chan UpdateMsg){
     }
     updateCh<-UpdateMsg{
         State: 1,
-        Total: total
+        Total: total,
     }
 }
 
@@ -138,10 +138,11 @@ func main() {
     walls, max_y, max_x := parse_grid(string(file))
     updateCh := make(chan UpdateMsg, 1)
     go pour_sand(walls, max_y, updateCh)
-    tui_model := InitModel(updateCh, max_x, max_y)
+    tui_model := InitModel(updateCh, walls, max_x+1, max_y)
     p := tea.NewProgram(tui_model)
     if _, err := p.Run(); err != nil {
-        log.Fatal(err)
+        fmt.Println(err)
+        os.Exit(-1)
     }
     //fmt.Printf("Dims: %vx%v\n", max_x, max_y)
     //fmt.Printf("Grains of Sand: %v\n", pour_sand(walls, max_y))

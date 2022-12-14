@@ -2,42 +2,45 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 	"time"
+    "strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 const (
-    TICKRATE = 100
+    TICKRATE = 1
+    OFFSET = 400
 	TITLE = `
- _______ _______ _______ _______ _      _________________           _______ _______ _______ _______ _______         _______________________ 
-(  ____ (  ____ (  ____ (  ___  ( \     \__   __\__   __|\     /|  (  ____ (  ____ (  ____ (  ____ (  ____ |\     /(  ___  \__   __(  ____ )
-| (    )| (    \| (    \| (   ) | (        ) (     ) (  | )   ( |  | (    )| (    \| (    \| (    \| (    )| )   ( | (   ) |  ) (  | (    )|
-| (____)| (__   | |     | |   | | |        | |     | |  | (___) |  | (____)| (__   | (_____| (__   | (____)| |   | | |   | |  | |  | (____)|
-|     __|  __)  | | ____| |   | | |        | |     | |  |  ___  |  |     __|  __)  (_____  |  __)  |     __( (   ) | |   | |  | |  |     __)
-| (\ (  | (     | | \_  | |   | | |        | |     | |  | (   ) |  | (\ (  | (           ) | (     | (\ (   \ \_/ /| |   | |  | |  | (\ (   
-| ) \ \_| (____/| (___) | (___) | (____/___) (___  | |  | )   ( |  | ) \ \_| (____//\____) | (____/| ) \ \__ \   / | (___) ___) (__| ) \ \__
-|/   \__(_______(_______(_______(_______\_______/  )_(  |/     \|  |/   \__(_______\_______(_______|/   \__/  \_/  (_______\_______|/   \__/
-
+                 _______ _______ _______ _______ _      _________________           _______ _______ _______ _______ _______         _______________________ 
+                (  ____ (  ____ (  ____ (  ___  ( \     \__   __\__   __|\     /|  (  ____ (  ____ (  ____ (  ____ (  ____ |\     /(  ___  \__   __(  ____ )
+                | (    )| (    \| (    \| (   ) | (        ) (     ) (  | )   ( |  | (    )| (    \| (    \| (    \| (    )| )   ( | (   ) |  ) (  | (    )|
+                | (____)| (__   | |     | |   | | |        | |     | |  | (___) |  | (____)| (__   | (_____| (__   | (____)| |   | | |   | |  | |  | (____)|
+                |     __|  __)  | | ____| |   | | |        | |     | |  |  ___  |  |     __|  __)  (_____  |  __)  |     __( (   ) | |   | |  | |  |     __)
+                | (\ (  | (     | | \_  | |   | | |        | |     | |  | (   ) |  | (\ (  | (           ) | (     | (\ (   \ \_/ /| |   | |  | |  | (\ (   
+                | ) \ \_| (____/| (___) | (___) | (____/___) (___  | |  | )   ( |  | ) \ \_| (____//\____) | (____/| ) \ \__ \   / | (___) ___) (__| ) \ \__
+                |/   \__(_______(_______(_______(_______\_______/  )_(  |/     \|  |/   \__(_______\_______(_______|/   \__/  \_/  (_______\_______|/   \__/
+                
 `
-	hline = `=======================================================================================`
+	hline = `============================================================================================================================`
 )
 
 // Style
 const (
+    //bebd8f
 	sand       = lipgloss.Color("#C2B280")
-	rock       = lipgloss.Color("#918e7d")
-	empty      = lipgloss.Color("#333333")
-    background = lipgloss.Color("#d3d3d3")
+    hardSand   = lipgloss.Color("#ffcf5c")
+	rock       = lipgloss.Color("#D3D3D3")
 )
 
 var (
-	sandStyle  = lipgloss.NewStyle().Foreground(sand).Background(background)
-	rockStyle  = lipgloss.NewStyle().Foreground(rock).Background(background)
-	emptyStyle =  lipgloss.NewStyle().Foreground(background).Background(background)
+	sandStyle  = lipgloss.NewStyle().Foreground(sand)
+    setSandStyle = lipgloss.NewStyle().Foreground(hardSand)
+	rockStyle  = lipgloss.NewStyle().Foreground(rock)
 )
+
+type TickMsg time.Time
 
 func tickStats() tea.Cmd {
 	return tea.Every(
@@ -62,20 +65,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	case TickMsg:
-        msg := <-updateCh
+        update := <-m.updateCh
         // grain hit bottom:
-        if x.State == 0{
-            m.cave[msg.Y][msg.X] = "O"
-            m.cave[0][500] = "+"
+        if update.State == 0{
+            m.total = update.Total
+            m.cave[update.Y][update.X-OFFSET] = "O"
+            m.cave[0][500-OFFSET] = "+"
             return m, tickStats()
         // grain falling:
-        } else if x.State == -1{
-            m.cave[msg.Y][msg.X] = ""
-            m.cave[msg.Dy][msg.Dx] = "+"
+        } else if update.State == -1{
+            m.cave[update.Y][update.X-OFFSET] = " "
+            m.cave[update.Dy][update.Dx-OFFSET] = "+"
             return m, tickStats()
         // reached the top:
-        } else if x.State == 1{
-            m.total = x.Total
+        } else if update.State == 1{
+            m.total = update.Total
             return m, nil
         }
 	}
@@ -83,61 +87,58 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) caveString() string {
-    cave := ``
-    //Do stuff:
+    cave := strings.Builder{}
     for _, row := range m.cave {
-        curr_s := ""
+        curr_s := strings.Builder{}
+        prev := ""
         i := 0
         for _, c := range row {
-            if len(curr_s) > 0 && curr_s[len(curr_s)-1] != c{
-                if curr_s[len(curr_s)-1] == ""{
-                    cave += emptyStyle.Width(i).Render(curr_s)
-                    curr_s = ""
-                } else if curr_s[len(curr_s)-1] == "+" || curr_s[len(curr_s)-1] == "O"{
-                    cave += sandStyle.Width(i).Render(curr_s)
-                    curr_s = ""
-                } else if curr_s[len(curr_s)-1] == "#"{
-                    cave += rockStyle.Width(i).Render(curr_s)
-                    curr_s = ""
+            if prev != "" && prev != string(c){
+                if prev == " "{
+                    cave.WriteString(curr_s.String())
+                } else if prev == "+"{
+                    cave.WriteString(sandStyle.Width(i).Render(curr_s.String()))
+                } else if prev == "O"{
+                    cave.WriteString(setSandStyle.Width(i).Render(curr_s.String()))
+                } else if prev == "#"{
+                    cave.WriteString(rockStyle.Width(i).Render(curr_s.String()))
                 }
+                curr_s = strings.Builder{}
                 i = 0
             }
-            // Empty
-            if c == ""{
-                curr_s += '.'
-            } else if c == "+" || c == "O"{
-                curr_s += c
-            } else if c == "#"{
-                curr_s += c
-            }
+            ch := string(c)
+            curr_s.WriteString(ch)
+            prev = ch
             i++
         }
-        if curr_s[len(curr_s)-1] == ""{
-            cave += emptyStyle.Width(i).Render(curr_s)
-            curr_s = ""
-        } else if curr_s[len(curr_s)-1] == "+" || curr_s[len(curr_s)-1] == "O"{
-            cave += sandStyle.Width(i).Render(curr_s)
-            curr_s = ""
-        } else if curr_s[len(curr_s)-1] == "#"{
-            cave += rockStyle.Width(i).Render(curr_s)
-            curr_s = ""
+        if prev == " "{
+            cave.WriteString(curr_s.String())
+        } else if prev == "+" || prev == "O"{
+            cave.WriteString(sandStyle.Width(i).Render(curr_s.String()))
+        } else if prev == "#"{
+            cave.WriteString(rockStyle.Width(i).Render(curr_s.String()))
         }
-        curr_s += '\n'
+        cave.WriteString("\n")
     }
+
+    return cave.String()
 }
 
 func (m Model) View() string {
+    //fmt.Println(m.caveString())
 	body := fmt.Sprintf(
 		`
-            %s
-	%s
 %s
-		    %s
+                        %s
+                                                                                %s
+%s
+		                                                            %s
         `,
         // title
-		sandStyle.Width(150).Render(TITLE),
+		sandStyle.Width(200).Render(TITLE),
         rockStyle.Width(150).Render(hline),
-        // grid
+        rockStyle.Width(15).Bold(true).Render(fmt.Sprintf("Total: %v", m.total)),
+        //grid,
         m.caveString(),
 		// quit
 		rockStyle.Width(30).Render("Press Esc or Ctrl+C to quit"),
@@ -156,16 +157,30 @@ type UpdateMsg struct {
 }
 
 type Model struct {
-    cave   [][]string
-    caveCh chan UpdateMsg
-    total  int
+    cave     [][]string
+    updateCh chan UpdateMsg
+    total    int
 }
 
-func InitModel(updateCh chan UpdateMsg, x int, y int) Model {
+
+func InitModel(updateCh chan UpdateMsg, walls map[Coords]bool, x int, y int) Model {
     m := Model{
-        cave: [y][x]string{},
-        caveCh: updateCh,
+        cave: make([][]string, y),
+        updateCh: updateCh,
 	}
-    m.cave[0][500] = "+"
+    for i := range m.cave {
+        m.cave[i] = make([]string, x-(OFFSET/2))
+    }
+    for y, row := range m.cave {
+        for x, _ := range row {
+            loc := Coords{x: x+OFFSET, y: y}
+            if walls[loc] || y == len(m.cave)-1 {
+                m.cave[y][x] = "#"
+            } else {
+                m.cave[y][x] = " "
+            }
+        }
+    }
+    m.cave[0][500-OFFSET] = "+"
 	return m
 }
