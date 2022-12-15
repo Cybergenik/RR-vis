@@ -158,29 +158,30 @@ type UpdateMsg struct {
 
 type Model struct {
     cave     [][]string
+    caveStr  []string
     updateCh chan UpdateMsg
     total    int
 }
 
 
-func InitModel(updateCh chan UpdateMsg, walls map[Coords]bool, x int, y int) Model {
+func InitModel(updateCh chan UpdateMsg, walls map[Coords]bool, max_x int, max_y int) Model {
     m := Model{
-        cave: make([][]string, y),
+        cave: make([][]string, max_y),
         updateCh: updateCh,
 	}
-    for i := range m.cave {
-        m.cave[i] = make([]string, x-(OFFSET/2))
-    }
-    for y, row := range m.cave {
-        for x, _ := range row {
+    for y, _ := range m.cave {
+        curr_row := make([]string, max_x-(OFFSET/2))
+        for x:=0; x<(max_x-(OFFSET/2));x++ {
             loc := Coords{x: x+OFFSET, y: y}
             if walls[loc] || y == len(m.cave)-1 {
-                m.cave[y][x] = "#"
+                curr_row[x] = "#"
             } else {
-                m.cave[y][x] = " "
+                curr_row[x] = " "
             }
         }
+        m.cave[y] = curr_row
     }
     m.cave[0][500-OFFSET] = "+"
 	return m
 }
+

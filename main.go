@@ -137,8 +137,8 @@ func main() {
     }
     walls, max_y, max_x := parse_grid(string(file))
     updateCh := make(chan UpdateMsg, 1)
-    go pour_sand(walls, max_y, updateCh)
     tui_model := InitModel(updateCh, walls, max_x+1, max_y)
+    go pour_sand(walls, max_y, updateCh)
     p := tea.NewProgram(tui_model)
     if _, err := p.Run(); err != nil {
         fmt.Println(err)
