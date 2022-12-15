@@ -70,12 +70,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         if update.State == 0{
             m.total = update.Total
             m.cave[update.Y][update.X-OFFSET] = "O"
+            m.caveStr[update.Y] = caveRow(m.cave[update.Y])
             m.cave[0][500-OFFSET] = "+"
+            m.caveStr[0] = caveRow(m.cave[0])
             return m, tickStats()
         // grain falling:
         } else if update.State == -1{
             m.cave[update.Y][update.X-OFFSET] = " "
+            m.caveStr[update.Y] = caveRow(m.cave[update.Y])
             m.cave[update.Dy][update.Dx-OFFSET] = "+"
+            m.caveStr[update.Dy] = caveRow(m.cave[update.Dy])
             return m, tickStats()
         // reached the top:
         } else if update.State == 1{
@@ -86,44 +90,45 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) caveString() string {
+func caveRow(row []string) string {
     cave := strings.Builder{}
-    for _, row := range m.cave {
-        curr_s := strings.Builder{}
-        prev := ""
-        i := 0
-        for _, c := range row {
-            if prev != "" && prev != string(c){
-                if prev == " "{
-                    cave.WriteString(curr_s.String())
-                } else if prev == "+"{
-                    cave.WriteString(sandStyle.Width(i).Render(curr_s.String()))
-                } else if prev == "O"{
-                    cave.WriteString(setSandStyle.Width(i).Render(curr_s.String()))
-                } else if prev == "#"{
-                    cave.WriteString(rockStyle.Width(i).Render(curr_s.String()))
-                }
-                curr_s = strings.Builder{}
-                i = 0
+    curr_s := strings.Builder{}
+    prev := ""
+    i := 0
+    for _, c := range row {
+        if prev != "" && prev != string(c){
+            if prev == " "{
+                cave.WriteString(curr_s.String())
+            } else if prev == "+"{
+                cave.WriteString(sandStyle.Width(i).Render(curr_s.String()))
+            } else if prev == "O"{
+                cave.WriteString(setSandStyle.Width(i).Render(curr_s.String()))
+            } else if prev == "#"{
+                cave.WriteString(rockStyle.Width(i).Render(curr_s.String()))
             }
-            ch := string(c)
-            curr_s.WriteString(ch)
-            prev = ch
-            i++
+            curr_s = strings.Builder{}
+            i = 0
         }
-        if prev == " "{
-            cave.WriteString(curr_s.String())
-        } else if prev == "+" || prev == "O"{
-            cave.WriteString(sandStyle.Width(i).Render(curr_s.String()))
-        } else if prev == "#"{
-            cave.WriteString(rockStyle.Width(i).Render(curr_s.String()))
-        }
-        cave.WriteString("\n")
+        ch := string(c)
+        curr_s.WriteString(ch)
+        prev = ch
+        i++
     }
-
+    if prev == " "{
+        cave.WriteString(curr_s.String())
+    } else if prev == "+" || prev == "O"{
+        cave.WriteString(sandStyle.Width(i).Render(curr_s.String()))
+    } else if prev == "#"{
+        cave.WriteString(rockStyle.Width(i).Render(curr_s.String()))
+    }
     return cave.String()
 }
 
+const funnel = 
+`                                                                                                  \   /
+                                                                                                   \ /
+                                                                                                    *
+`
 func (m Model) View() string {
     //fmt.Println(m.caveString())
 	body := fmt.Sprintf(
@@ -132,14 +137,16 @@ func (m Model) View() string {
                         %s
                                                                                 %s
 %s
+%s
 		                                                            %s
         `,
         // title
 		sandStyle.Width(200).Render(TITLE),
         rockStyle.Width(150).Render(hline),
         rockStyle.Width(15).Bold(true).Render(fmt.Sprintf("Total: %v", m.total)),
+        funnel,
         //grid,
-        m.caveString(),
+        strings.Join(m.caveStr, "\n"),
 		// quit
 		rockStyle.Width(30).Render("Press Esc or Ctrl+C to quit"),
 	)
@@ -167,6 +174,7 @@ type Model struct {
 func InitModel(updateCh chan UpdateMsg, walls map[Coords]bool, max_x int, max_y int) Model {
     m := Model{
         cave: make([][]string, max_y),
+        caveStr: make([]string, max_y),
         updateCh: updateCh,
 	}
     for y, _ := range m.cave {
@@ -179,6 +187,7 @@ func InitModel(updateCh chan UpdateMsg, walls map[Coords]bool, max_x int, max_y 
                 curr_row[x] = " "
             }
         }
+        m.caveStr[y] = caveRow(curr_row)
         m.cave[y] = curr_row
     }
     m.cave[0][500-OFFSET] = "+"

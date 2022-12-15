@@ -144,6 +144,4 @@ func main() {
         fmt.Println(err)
         os.Exit(-1)
     }
-    //fmt.Printf("Dims: %vx%v\n", max_x, max_y)
-    //fmt.Printf("Grains of Sand: %v\n", pour_sand(walls, max_y))
 }
