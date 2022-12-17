@@ -8,7 +8,7 @@ AoC Day14 part 2 Visualizer
 
 <img src="demo.gif" align="center" alt="visualization"/><br>
 
-by: <a href="https://twitter.com/cybergenik" target="blanc_">Luciano Remes </a>
+by: <a href="https://twitter.com/cybergenik" target="_blank">Luciano Remes </a>
 </div>
 
 ### Requirements:
