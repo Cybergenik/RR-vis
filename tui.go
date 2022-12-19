@@ -12,6 +12,11 @@ import (
 const (
     TICKRATE = 1
     OFFSET = 400
+    funnel = 
+`                                                                                                  \   /
+                                                                                                   \ /
+                                                                                                    *
+`
 	TITLE = `
                  _______ _______ _______ _______ _      _________________           _______ _______ _______ _______ _______         _______________________ 
                 (  ____ (  ____ (  ____ (  ___  ( \     \__   __\__   __|\     /|  (  ____ (  ____ (  ____ (  ____ (  ____ |\     /(  ___  \__   __(  ____ )
@@ -116,19 +121,16 @@ func caveRow(row []string) string {
     }
     if prev == " "{
         cave.WriteString(curr_s.String())
-    } else if prev == "+" || prev == "O"{
+    } else if prev == "+"{
         cave.WriteString(sandStyle.Width(i).Render(curr_s.String()))
+    } else if prev == "O"{
+        cave.WriteString(setSandStyle.Width(i).Render(curr_s.String()))
     } else if prev == "#"{
         cave.WriteString(rockStyle.Width(i).Render(curr_s.String()))
     }
     return cave.String()
 }
 
-const funnel = 
-`                                                                                                  \   /
-                                                                                                   \ /
-                                                                                                    *
-`
 func (m Model) View() string {
     //fmt.Println(m.caveString())
 	body := fmt.Sprintf(
