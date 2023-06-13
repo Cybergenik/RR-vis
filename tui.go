@@ -49,7 +49,7 @@ type TickMsg time.Time
 
 func tickStats() tea.Cmd {
 	return tea.Every(
-		TICKRATE * time.Millisecond,
+		TICKRATE * time.Nanosecond,
 		func(t time.Time) tea.Msg {
 			return TickMsg(t)
 		},
@@ -101,7 +101,7 @@ func caveRow(row []string) string {
     prev := ""
     i := 0
     for _, c := range row {
-        if prev != "" && prev != string(c){
+        if prev != "" && prev != c{
             if prev == " "{
                 cave.WriteString(curr_s.String())
             } else if prev == "+"{
@@ -114,9 +114,8 @@ func caveRow(row []string) string {
             curr_s = strings.Builder{}
             i = 0
         }
-        ch := string(c)
-        curr_s.WriteString(ch)
-        prev = ch
+        curr_s.WriteString(c)
+        prev = c
         i++
     }
     if prev == " "{
@@ -179,7 +178,7 @@ func InitModel(updateCh chan UpdateMsg, walls map[Coords]bool, max_x int, max_y 
         caveStr: make([]string, max_y),
         updateCh: updateCh,
 	}
-    for y, _ := range m.cave {
+    for y := range m.cave {
         curr_row := make([]string, max_x-(OFFSET/2))
         for x:=0; x<(max_x-(OFFSET/2));x++ {
             loc := Coords{x: x+OFFSET, y: y}
