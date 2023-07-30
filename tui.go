@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -44,15 +43,16 @@ var (
 	rockStyle    = lipgloss.NewStyle().Foreground(rock)
 )
 
-type TickMsg time.Time
+type Model struct {
+	cave     [][]string
+	caveStr  []string
+	updateCh chan Cave
+	total    int
+}
+type TickMsg struct{}
 
 func tickStats() tea.Cmd {
-	return tea.Every(
-		TICKRATE*time.Nanosecond,
-		func(t time.Time) tea.Msg {
-			return TickMsg(t)
-		},
-	)
+	return func() tea.Msg { return TickMsg(struct{}{}) }
 }
 
 func (m Model) Init() tea.Cmd {
@@ -69,26 +69,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	case TickMsg:
-		update := <-m.updateCh
+		cave := <-m.updateCh
 		// grain hit bottom:
-		if update.State == 0 {
-			m.total = update.Total
-			m.cave[update.Y][update.X-OFFSET] = "O"
-			m.caveStr[update.Y] = caveRow(m.cave[update.Y])
-			m.cave[0][500-OFFSET] = "+"
-			m.caveStr[0] = caveRow(m.cave[0])
-			return m, tickStats()
-			// grain falling:
-		} else if update.State == -1 {
-			m.cave[update.Y][update.X-OFFSET] = " "
-			m.caveStr[update.Y] = caveRow(m.cave[update.Y])
-			m.cave[update.Dy][update.Dx-OFFSET] = "+"
-			m.caveStr[update.Dy] = caveRow(m.cave[update.Dy])
-			return m, tickStats()
-			// reached the top:
-		} else if update.State == 1 {
-			m.total = update.Total
+		if cave.State == DONE {
+			m.total = cave.Total
 			return m, nil
+		} else if cave.State == POURING {
+			for _, grain := range cave.Grains {
+				if grain.Type == WALL {
+					m.total = cave.Total
+					m.cave[grain.Y][grain.X-OFFSET] = "O"
+					m.caveStr[grain.Y] = caveRow(m.cave[grain.Y])
+					m.cave[0][500-OFFSET] = "+"
+					m.caveStr[0] = caveRow(m.cave[0])
+				} else if grain.Type == SAND {
+					m.cave[grain.Dy][grain.Dx-OFFSET] = "+"
+					m.caveStr[grain.Dy] = caveRow(m.cave[grain.Dy])
+				}
+			}
+			return m, tickStats()
 		}
 	}
 	return m, nil
@@ -130,7 +129,6 @@ func caveRow(row []string) string {
 }
 
 func (m Model) View() string {
-	fmt.Println(m.caveStr)
 	body := fmt.Sprintf(
 		`
 %s
@@ -154,23 +152,7 @@ func (m Model) View() string {
 	return body
 }
 
-type UpdateMsg struct {
-	X     int
-	Y     int
-	Dx    int
-	Dy    int
-	State int
-	Total int
-}
-
-type Model struct {
-	cave     [][]string
-	caveStr  []string
-	updateCh chan UpdateMsg
-	total    int
-}
-
-func InitModel(updateCh chan UpdateMsg, walls map[Coords]bool, max_x int, max_y int) Model {
+func InitModel(updateCh chan Cave, walls map[Coord]bool, max_x int, max_y int) Model {
 	m := Model{
 		cave:     make([][]string, max_y),
 		caveStr:  make([]string, max_y),
@@ -179,7 +161,7 @@ func InitModel(updateCh chan UpdateMsg, walls map[Coords]bool, max_x int, max_y 
 	for y := range m.cave {
 		curr_row := make([]string, max_x-(OFFSET/2))
 		for x := 0; x < (max_x - (OFFSET / 2)); x++ {
-			loc := Coords{x: x + OFFSET, y: y}
+			loc := Coord{x: x + OFFSET, y: y}
 			if walls[loc] || y == len(m.cave)-1 {
 				curr_row[x] = "#"
 			} else {
